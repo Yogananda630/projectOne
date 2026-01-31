@@ -1,0 +1,31 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main   # main branch ki push ayithe trigger avtundi
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ GitHub repo code checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ SSH setup (EC2 connect avvadaniki)
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.JENKINS_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      # 3️⃣ Code ni EC2 ki copy cheyyadam (rsync)
+      - name: Deploy using rsync
+        run: |
+          rsync -avz \
+          --exclude '.git' \
+          -e "ssh -o StrictHostKeyChecking=no" \
+          ./ ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/webapp-test
